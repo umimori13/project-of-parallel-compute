@@ -1,0 +1,159 @@
+    import javax.sound.sampled.*;
+    import java.io.File;
+    import java.io.IOException;
+
+    public class Project1 {
+
+            File outputFile = new File("recoder.wav");
+            TargetDataLine targetDataLine = null;
+            AudioInputStream audioInputStream = null;
+            static String file = "recoder.wav";
+            SourceDataLine sourceDataLine = null;
+            AudioFormat inaudioFormat = null;
+            AudioFormat audioFormat = new AudioFormat(
+                    44100.0F, 16, 1, true,
+                    false);
+
+            void recordstart( ) {
+                try {
+                    DataLine.Info info = new DataLine.Info(TargetDataLine.class,
+                            audioFormat);
+                    targetDataLine = (TargetDataLine) AudioSystem.getLine(info);
+                    targetDataLine.open(audioFormat);
+                    targetDataLine.start();
+                    //this is begin record
+                    System.out.println("record begin");
+                    AudioInputStream ain = new AudioInputStream(targetDataLine);
+                    //this is write the file
+                    AudioSystem.write(ain, AudioFileFormat.Type.WAVE,outputFile);
+
+                }catch (LineUnavailableException e){
+                    e.printStackTrace();
+                }catch (IOException ea) {
+                    ea.printStackTrace();
+                }
+            }
+
+            void recorddone(){
+                targetDataLine.stop();
+                targetDataLine.close();
+                System.out.println("record over");
+            }
+
+            void inaudio(String filename){
+                try {
+                    audioInputStream = AudioSystem.getAudioInputStream(new File(filename));
+                    inaudioFormat = audioInputStream.getFormat();
+                    System.out.println(" play begin");
+                    System.out.println("frame per second£º"+inaudioFormat.getSampleRate());
+                    System.out.println("total frame£º"+audioInputStream.getFrameLength());
+                    System.out.println("total time(s)£º"+audioInputStream.getFrameLength()/inaudioFormat.getSampleRate());
+                    DataLine.Info info = new DataLine.Info(SourceDataLine.class, audioFormat);
+                    sourceDataLine = (SourceDataLine) AudioSystem.getLine(info);
+                } catch (UnsupportedAudioFileException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (LineUnavailableException e) {
+                    e.printStackTrace();
+                }
+
+            }
+            void playbegin() throws IOException {
+                byte[] b = new byte[1024];
+                int len = 0;
+                try {
+                    sourceDataLine.open(inaudioFormat, 1024);
+                } catch (LineUnavailableException e) {
+                    e.printStackTrace();
+                }
+                sourceDataLine.start();
+                while ((len = audioInputStream.read(b)) > 0) {
+                    sourceDataLine.write(b, 0, len);
+                }
+                audioInputStream.close();
+                sourceDataLine.drain();
+                sourceDataLine.close();
+            }
+
+        public static void main(String[] args) throws IOException, InterruptedException {
+            int time = 11000;
+            Project1 func = new Project1();
+            String filename= "test.wav";
+            Thread reco = new Thread( new Runnable() {
+                public void run() {
+                    try {
+                        Thread.sleep(time);
+                    } catch (InterruptedException ex) {
+                        ex.printStackTrace();
+                    }
+                    func.recorddone();
+                }
+            });
+            reco .start();
+            new Thread(){
+                public void run() {
+                    try {
+                        Project1 b = new Project1();
+                        b.inaudio(filename);
+                        b.playbegin();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                    func.recorddone();
+                }
+            } .start();
+            func.recordstart();
+
+            try {
+                Project1 a = new Project1();
+                a.inaudio(file);
+                a.playbegin();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+
+
+
+            /*
+            File outputFile = new File("recoder.wav");
+            AudioFormat audioFormat = new AudioFormat(
+                    AudioFormat.Encoding.PCM_SIGNED, 44100.0F, 16, 2, 4, 44100.0F,
+                    false);
+            DataLine.Info info = new DataLine.Info(TargetDataLine.class,
+                    audioFormat);
+            TargetDataLine targetDataLine = null;
+            try {
+                targetDataLine = (TargetDataLine) AudioSystem
+                        .getLine(info);
+            } catch (LineUnavailableException e) {
+                e.printStackTrace();
+            }
+            try {
+                targetDataLine.open(audioFormat);
+            } catch (LineUnavailableException e) {
+                e.printStackTrace();
+            }
+            targetDataLine.start();
+            TargetDataLine finalTargetDataLine = targetDataLine;
+            new Thread() {
+                public void run() {
+                    AudioInputStream cin = new AudioInputStream(finalTargetDataLine);
+                    try {
+                        AudioSystem.write(cin, AudioFileFormat.Type.WAVE,
+                                outputFile);
+                        System.out.println("over");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                };
+            }.start();
+            System.out.println("begin");
+            System.in.read();
+            targetDataLine.close();
+            */
+            }
+        }
+
